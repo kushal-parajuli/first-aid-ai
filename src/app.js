@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const firstAidRoutes = require("./routes/firstAidRoutes");
 
 const app = express();
 
@@ -18,6 +19,11 @@ app.get("/", (req, res) => {
         message: "AI First Aid Assistant API is running successfully 🚑"
     });
 });
+
+// ===============================
+// API Routes
+// ===============================
+app.use("/api", firstAidRoutes);
 
 // ===============================
 // Export App
