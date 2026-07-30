@@ -1,27 +1,31 @@
 // src/services/ollamaService.js
-//
-// This service's ONLY job is talking to Ollama.
-// It knows nothing about first aid, prompts, or business logic —
-// that separation matters because if we ever swap Ollama for a
-// different AI provider, this is the only file we'd need to rewrite.
 
 const axios = require("axios");
 const ollamaConfig = require("../config/ollama");
+const firstAidPrompt = require("../prompts/firstAidPrompt");
 
 /**
- * Sends a prompt to the Ollama model and returns the generated text.
- * @param {string} prompt - The full text prompt to send to the model.
+ * Sends the full conversation (system prompt + history + new question)
+ * to Ollama's chat endpoint and returns the model's reply text.
+ * @param {Array} history - Prior messages: [{ role, content }, ...]
+ * @param {string} userQuestion - The new question from the user.
  * @returns {Promise<string>} - The model's text response.
  */
-async function generateFirstAidResponse(prompt) {
-    const url = `${ollamaConfig.baseUrl}${ollamaConfig.generateEndpoint}`;
+async function generateFirstAidResponse(history, userQuestion) {
+    const url = `${ollamaConfig.baseUrl}/api/chat`;
+
+    const messages = [
+        { role: "system", content: firstAidPrompt },
+        ...history,
+        { role: "user", content: userQuestion },
+    ];
 
     try {
         const response = await axios.post(
             url,
             {
                 model: ollamaConfig.model,
-                prompt: prompt,
+                messages: messages,
                 stream: false,
             },
             {
@@ -29,11 +33,9 @@ async function generateFirstAidResponse(prompt) {
             }
         );
 
-        // Ollama's response shape looks like: { response: "text...", done: true, ... }
-        return response.data.response;
+        // /api/chat responses look like: { message: { role, content }, done: true, ... }
+        return response.data.message.content;
     } catch (error) {
-        // Log the FULL error detail Ollama sent back, not just the generic message.
-        // error.response.data usually contains Ollama's actual reason for the failure.
         console.error("Ollama service error:", error.response?.data || error.message);
         throw new Error("Failed to get a response from the AI model.");
     }

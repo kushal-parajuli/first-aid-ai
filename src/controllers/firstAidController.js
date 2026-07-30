@@ -1,17 +1,19 @@
 // src/controllers/firstAidController.js
-//
-// The controller's job: handle the HTTP request/response cycle.
-// It reads what the client sent, calls the right service to do the
-// actual work, and sends back a clean response. It should NOT contain
-// AI logic itself — that belongs in the service layer.
 
 const { generateFirstAidResponse } = require("../services/ollamaService");
+const { getHistory, addMessage } = require("../utils/conversationStore");
+
+function extractEmergencyLevel(aiText) {
+    if (aiText.includes("🔴")) return "Red";
+    if (aiText.includes("🟡")) return "Yellow";
+    if (aiText.includes("🟢")) return "Green";
+    return "Unknown";
+}
 
 async function handleFirstAidQuery(req, res) {
     try {
-        const { question } = req.body;
+        const { question, sessionId } = req.body;
 
-        // Basic input validation — never trust incoming data.
         if (!question || typeof question !== "string" || question.trim() === "") {
             return res.status(400).json({
                 success: false,
@@ -19,14 +21,27 @@ async function handleFirstAidQuery(req, res) {
             });
         }
 
-        // For now, we send the raw question directly to Ollama.
-        // In the next step, we'll wrap this with our first-aid system prompt
-        // so the AI actually behaves like a first-aid assistant.
-        const aiResponse = await generateFirstAidResponse(question);
+        if (!sessionId || typeof sessionId !== "string") {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide a 'sessionId' to track the conversation.",
+            });
+        }
+
+        const history = getHistory(sessionId);
+        const aiResponse = await generateFirstAidResponse(history, question);
+
+        // Save both sides of this exchange so future questions in this
+        // session have the full context.
+        addMessage(sessionId, "user", question);
+        addMessage(sessionId, "assistant", aiResponse);
+
+        const emergencyLevel = extractEmergencyLevel(aiResponse);
 
         return res.status(200).json({
             success: true,
             answer: aiResponse,
+            emergencyLevel: emergencyLevel,
         });
     } catch (error) {
         console.error("Controller error:", error.message);
