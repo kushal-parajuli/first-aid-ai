@@ -9,8 +9,42 @@ const emergencyStyles = {
   Unknown: "bg-stone-100 text-stone-600 border-stone-300",
 };
 
-function generateSessionId() {
-  return "session-" + Math.random().toString(36).slice(2, 11);
+const STORAGE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const STORAGE_KEY = "firstAidChat";
+
+function generateId() {
+  return Math.random().toString(36).slice(2, 11);
+}
+
+/**
+ * Loads the saved conversation from localStorage, if it exists and
+ * is still within the 1-hour window. localStorage is shared across
+ * all tabs/windows of the same browser and survives full browser
+ * restarts — that's what makes "new tab" and "reopen browser" both
+ * restore history, until it expires or a different browser is used.
+ */
+function loadSavedConversation() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    const parsed = JSON.parse(raw);
+    const age = Date.now() - parsed.savedAt;
+    if (age > STORAGE_TTL_MS) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveConversation(sessionId, messages) {
+  localStorage.setItem(
+    STORAGE_KEY,
+    JSON.stringify({ sessionId, messages, savedAt: Date.now() })
+  );
 }
 
 function EmergencyBadge({ level }) {
@@ -42,15 +76,24 @@ function PulseMark() {
 }
 
 export default function App() {
-  const [messages, setMessages] = useState([]);
+  const saved = loadSavedConversation();
+
+  const [messages, setMessages] = useState(saved?.messages || []);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sessionId] = useState(generateSessionId);
+  const [sessionId] = useState(saved?.sessionId || generateId);
   const scrollRef = useRef(null);
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // Persist to localStorage whenever the conversation changes.
+  useEffect(() => {
+    if (messages.length > 0) {
+      saveConversation(sessionId, messages);
+    }
+  }, [messages, sessionId]);
 
   async function sendMessage() {
     const question = input.trim();
@@ -114,6 +157,9 @@ export default function App() {
             ⚠ Educational guidance only — not a substitute for professional medical care. In a life-threatening emergency, call your local emergency services immediately.
           </p>
         </div>
+        <p className="mt-2 text-xs text-white text-center">
+          Chat history is saved on this device for 1 hour, then cleared automatically.
+        </p>
       </header>
 
       {/* Messages */}
