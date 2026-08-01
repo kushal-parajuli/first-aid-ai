@@ -1,6 +1,6 @@
 # AI First Aid Assistant
 
-A full-stack AI-powered assistant that provides structured first-aid guidance, built using a locally-run LLM (Llama 3.2 via Ollama). Designed as a standalone, reusable module for future integration into the **Smart Blood Bank System**.
+A full-stack AI-powered assistant that provides structured first-aid guidance, built using a locally-run LLM (Llama 3.2 via Ollama). Designed as a standalone, reusable module for future integration into any System.
 
 ---
 
@@ -27,7 +27,7 @@ This project uses Meta's open-source **Llama 3.2** model, run locally through **
 - Responsive chat UI (React + Tailwind), dark theme
 - Chat history persists in-browser for 1 hour (survives refresh, new tabs, and browser restart within that window)
 
-**Not implemented (hardware-limited):** image, voice, and video input — deferred until vision-capable hardware is available. Backend architecture supports adding these later without redesign.
+**Not implemented:** image, voice, and video input. Backend architecture supports adding these later without redesign.
 
 ---
 
@@ -194,15 +194,3 @@ Main endpoint — ask a first-aid question.
 - CPU-only inference on low-VRAM machines is noticeably slower on the first request after starting Ollama (model load time)
 
 ---
-
-## Roadmap
-
-- [x] Project setup & clean architecture
-- [x] AI system prompt with structured responses
-- [x] Text-based first aid Q&A
-- [x] Conversation memory
-- [x] React + Tailwind frontend
-- [ ] Image analysis (blocked on hardware)
-- [ ] Voice input/output (blocked on hardware)
-- [ ] Video understanding (blocked on hardware)
-- [ ] Integration into Smart Blood Bank System
